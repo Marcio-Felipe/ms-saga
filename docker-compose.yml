@@ -1,0 +1,81 @@
+version: "3.9"
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  order-service:
+    build:
+      context: .
+      args:
+        SERVICE_NAME: order-service
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      HTTP_PORT: "8081"
+    ports:
+      - "8081:8081"
+    depends_on:
+      - rabbitmq
+
+  payment-service:
+    build:
+      context: .
+      args:
+        SERVICE_NAME: payment-service
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      HTTP_PORT: "8082"
+    ports:
+      - "8082:8082"
+    depends_on:
+      - rabbitmq
+
+  inventory-service:
+    build:
+      context: .
+      args:
+        SERVICE_NAME: inventory-service
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      HTTP_PORT: "8083"
+    ports:
+      - "8083:8083"
+    depends_on:
+      - rabbitmq
+
+  shipping-service:
+    build:
+      context: .
+      args:
+        SERVICE_NAME: shipping-service
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      HTTP_PORT: "8084"
+    ports:
+      - "8084:8084"
+    depends_on:
+      - rabbitmq
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - order-service
+      - payment-service
+      - inventory-service
+      - shipping-service
+
+  grafana:
+    image: grafana/grafana:11.2.2
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
